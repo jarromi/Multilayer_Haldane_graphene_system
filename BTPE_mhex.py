@@ -1,7 +1,7 @@
 #=====================================
 #
 #   Bulk topological proximity effect
-#    Code for diagonalizing Hamiltonian of a multilayer systems.
+#    Code for diagonalizing Hamiltonian of a multilayer system.
 #    System composed of multiple AA-stacked hexagonal lattice layers.
 #    Each layer described by the tight-binding model of free, spinless fermions.
 #    Working in momentum space.
@@ -102,9 +102,9 @@ class PhysicalSystem(object):
         If option randomly=True than small Gaussian noise (with sigma mean squared error) is added to each parameter.
         """
         if randomly:
-            self.layers[IL].update_values( t1*(1.+np.random.randn(1)*sigma) ,t2*(1.+np.random.randn(1)*sigma) ,phi*(1.+np.random.randn(1)*sigma) ,m*(1.+np.random.randn(1)*sigma) ,t31*(1.+np.random.randn(1)*sigma), t32*(1.+np.random.randn(1)*sigma) )
+            self.layers[LI].update_values( t1*(1.+np.random.randn(1)*sigma) ,t2*(1.+np.random.randn(1)*sigma) ,phi*(1.+np.random.randn(1)*sigma) ,m*(1.+np.random.randn(1)*sigma) ,t31*(1.+np.random.randn(1)*sigma), t32*(1.+np.random.randn(1)*sigma) )
         else:
-            self.layers[IL].update_values( t1 ,t2 ,phi ,m ,t31 ,t32 )
+            self.layers[LI].update_values( t1 ,t2 ,phi ,m ,t31 ,t32 )
                 
     def update_coupling(self,IC=0,r=0.0, randomly=False,sigma=0.03):
         """
@@ -148,6 +148,16 @@ class PhysicalSystem(object):
                 temp[2*i+3,2*i+1]=self.couplings[i]
 
         return temp
+	
+    def Ham_eigvals(self,kx,ky):
+        """
+        This method allows to access just the eigenvalue of the Hamiltonian sorted in a list.
+        """
+        tHam=self.Ham_gen(kx,ky)
+        eigval=np.linalg.eigvals(tHam)
+        sidc=eigval.argsort()
+        eigval=eigval[sidc]
+        return eigval.real
 
     def init_eigdata(self,LI=0):
         """
@@ -200,7 +210,7 @@ class PhysicalSystem(object):
                     sidc_loc=eigval_loc.argsort()
                     eigval_loc=eigval_loc[sidc_loc]
                     eigvec_loc=eigvec_loc[:,sidc_loc]
-                    self.LDM[i,ix,iy,:,:]=eigvec_locc
+                    self.LDM[i,ix,iy,:,:]=eigvec_loc
                 
                 # Remove layer LI and calculate the density matrix.
                 alocdmat=np.delete(dmat,2*LI,0)                                             #remove layer LI and project the density matrix
@@ -248,7 +258,7 @@ class PhysicalSystem(object):
         # Start with a random point in the BZ.
         x0up=[self.kS.kx0+random()*(self.kS.kxmax-self.kS.kx0),self.kS.ky0+random()*(self.kS.kymax-self.kS.ky0)]
         # Define functions to minimize
-        fun1= lambda x: self.Ham.gen(x[0],x[1])[self.NL]
+        fun1= lambda x: self.Ham_eigvals(x[0],x[1])[self.NL]
         # Optimize initial guess.
         x1up=optimize.minimize(fun1,x0up).x
         valup=fun1(x1up)
@@ -259,7 +269,7 @@ class PhysicalSystem(object):
                 xnew1up=optimize.minimize(fun1,x0up).x
                 if fun1(xnew1up)<valup:
                     x1up=xnew1up
-                    valp=fun1(x1up)
+                    valup=fun1(x1up)
         # Also always check special points in the BZ
         x0up=[0.,(4.*pi/3.)/np.sqrt(3.)]
         xnew1up=optimize.minimize(fun1,x0up).x
@@ -275,7 +285,7 @@ class PhysicalSystem(object):
         # Repeat the same for the lower band
         x0dn=[self.kS.kx0+random()*(self.kS.kxmax-self.kS.kx0),self.kS.ky0+random()*(self.kS.kymax-self.kS.ky0)]
         # Define functions to minimize
-        fun2= lambda x: -self.Ham.gen(x[0],x[1])[self.NL-1]
+        fun2= lambda x: -self.Ham_eigvals(x[0],x[1])[self.NL-1]
         # Optimize initial guess.
         x1dn=optimize.minimize(fun2,x0dn).x
         valdn=fun2(x1dn)
@@ -289,7 +299,7 @@ class PhysicalSystem(object):
                     valdn=fun2(x1dn)
         # Also always check special points in the BZ
         x0dn=[0.,(4.*pi/3.)/np.sqrt(3.)]
-        xnew1dnoptimize.minimize(fun2,x0dn).x
+        xnew1dn=optimize.minimize(fun2,x0dn).x
         if fun2(xnew1dn)<valdn:
             x1dn=xnew1dn
             valdn=fun2(x1dn)
@@ -312,7 +322,7 @@ class PhysicalSystem(object):
         # Start with a random point in the BZ.
         x0up=[self.kS.kx0+random()*(self.kS.kxmax-self.kS.kx0),self.kS.ky0+random()*(self.kS.kymax-self.kS.ky0)]
         # Define functions to minimize
-        fun1= lambda x: self.Ham.gen(x[0],x[1])[self.NL]-self.Ham.gen(x[0],x[1])[self.NL-1]
+        fun1= lambda x: self.Ham_eigvals(x[0],x[1])[self.NL]-self.Ham_eigvals(x[0],x[1])[self.NL-1]
         # Optimize initial guess.
         x1up=optimize.minimize(fun1,x0up).x
         valup=fun1(x1up)
@@ -323,7 +333,7 @@ class PhysicalSystem(object):
                 xnew1up=optimize.minimize(fun1,x0up).x
                 if fun1(xnew1up)<valup:
                     x1up=xnew1up
-                    valp=fun1(x1up)
+                    valup=fun1(x1up)
         # Also always check special points in the BZ
         x0up=[0.,(4.*pi/3.)/np.sqrt(3.)]
         xnew1up=optimize.minimize(fun1,x0up).x
@@ -383,7 +393,7 @@ class PhysicalSystem(object):
         Also uses Fukui's method for discretization.
         Returns the invariants for each layer as a list.
         """
-        cres=np.zeros(FS.NL,dtype=float)    # List of invariants
+        cres=np.zeros(self.NL,dtype=float)    # List of invariants
         # The U matrices from Fukui's method; storage...
         Ux_loc=np.zeros((self.kS.Nx+1,self.kS.Ny+1),dtype=complex)
         Uy_loc=np.zeros((self.kS.Nx+1,self.kS.Ny+1),dtype=complex)
@@ -487,7 +497,7 @@ class Layer(object):
         """
         return str(self.t1)+"<-->t1, \t"+str(self.t2)+"<-->t2, \t"+str(self.phi)+"<-->phi, \t"+str(self.m)+"<-->m, \t"+str(self.t31)+"<-->t31, \t"+str(self.t32)+"<-->t32, \n"
     
-    def Hx(kx,ky):
+    def Hx(self,kx,ky):
         """
         For a given layer calculate Hx component of the Hamiltonian in the momentum space based on the parameters.
         """
@@ -497,7 +507,7 @@ class Layer(object):
             + np.cos(3.*kx/2.+np.sqrt(3.)*ky/2.) + np.cos(3.*kx+np.sqrt(3.)*ky) + np.cos(-3.*kx/2.-3.*np.sqrt(3.)*ky/2.) )
         return Hxr
     
-    def Hy(kx,ky):
+    def Hy(self,kx,ky):
         """
         For a given layer calculate Hy component of the Hamiltonian in the momentum space based on the parameters.
         """
@@ -507,13 +517,13 @@ class Layer(object):
             + np.sin(3.*kx/2.+np.sqrt(3.)*ky/2.) - np.sin(3.*kx+np.sqrt(3.)*ky) + np.sin(-3.*kx/2.-3.*np.sqrt(3.)*ky/2.) )
         return Hyr
     
-    def Hz(kx,ky):
+    def Hz(self,kx,ky):
         """
         For a given layer calculate Hz component of the Hamiltonian in the momentum space based on the parameters.
         """
         return self.m-2.*self.t2*np.sin(self.phi)*(np.sin(3.*kx/2.+np.sqrt(3.)*ky/2.)+np.sin(-3.*kx/2.+np.sqrt(3.)*ky/2.)+np.sin(-np.sqrt(3.)*ky))
     
-    def H1(kx,ky):
+    def H1(self,kx,ky):
         """
         For a given layer calculate Hz component of the Hamiltonian in the momentum space based on the parameters.
         """
