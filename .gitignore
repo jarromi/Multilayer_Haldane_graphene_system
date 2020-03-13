@@ -1,5 +1,5 @@
 # ignore directory __pycache__
 __pycache__/
 
-# ignore directory .ipynb_checkpoits
-.ipynb_checkpoits/
+# ignore directory .ipynb_checkpoints
+.ipynb_checkpoints/
